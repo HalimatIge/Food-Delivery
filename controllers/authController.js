@@ -1,79 +1,83 @@
-const UserModel = require("../models/user.model");
-const jwt = require("jsonwebtoken");
-const bcrypt = require("bcryptjs");
+const UserModel = require("../models/user.model"); // Import User model
+const jwt = require("jsonwebtoken"); // Import JWT for token generation
 
-// Register User
+// Function to register a new user
 const registerUser = async (req, res) => {
-  console.log("Received request body:", req.body);
+  console.log("Received request body:", req.body); // Log incoming request
 
   try {
-    // Check if user already exists
-    const existingUser = await UserModel.findOne({ email: req.body.email });
-    if (existingUser) {
-      return res.send({ status: false, message: "Email already in use" });
-    }
+    const form = new UserModel(req.body); // Create a new user using the request body
+    await form.save(); // Save user to the database
 
-    // Hash password before saving
-    // const hashedPassword = await bcrypt.hash(req.body.password, 10);
-
-    // Create new user with hashed password
-    // const form = new UserModel({ ...req.body, password: hashedPassword });
-    const form = new UserModel(req.body);
-
-    await form.save();
-
-    console.log("User registered successfully:", form);
-    res.send({ status: true, message: "User registered successfully!" });
+    console.log("Data saved successfully:", form); // Log success
+    res.send({ status: true, message: "User registered successfully!" }); // Send success response
   } catch (err) {
-    console.log("Error saving user:", err);
-    res.send({ status: false, message: "Something went wrong" });
+    console.log("Error saving user:", err); // Log any errors
+
+    // Handle duplicate email error
+    if (err.code === 11000) {
+      res.send({ status: false, message: "Email already in use" });
+    } else {
+      res.send({ status: false, message: "Something went wrong" });
+    }
   }
 };
 
-// Sign In User
+// Function for user sign-in
 const signInUser = async (req, res) => {
-  console.log("Sign-in request:", req.body);
+  console.log("Sign-in request:", req.body); // Log the sign-in request
 
   try {
+    // Find user by email
     const user = await UserModel.findOne({ email: req.body.email });
 
+    // If user not found, return error
     if (!user) {
-      console.log("❌ Email not found in database.");
+      console.log("User not found in database.");
       return res.send({ status: false, message: "Wrong Email or Password" });
     }
 
+    // Validate entered password against the hashed password in the DB
     user.validatePassword(req.body.password, (err, same) => {
       if (err) {
-        console.log("❌ Error comparing passwords:", err);
+        console.log("Password comparison error:", err);
         return res.send({ status: false, message: "Something went wrong" });
       }
 
       if (!same) {
-        console.log("❌ Password doesn't match.");
+        console.log("Wrong email or password");
         return res.send({ status: false, message: "Wrong Email or Password" });
       }
 
-      console.log("✅ Login successful for:", user.email);
-      let token = jwt.sign({ email: req.body.email }, "secret", {
-        expiresIn: "1h",
-      });
+      console.log("User successfully authenticated:", user.email);
 
+      // Create JWT token with the user's email and role
+      let token = jwt.sign(
+        { email: req.body.email, role: user.role },
+        "secret",
+        {
+          expiresIn: "1h", // Token will expire in 1 hour
+        }
+      );
       res.send({ status: true, message: "Sign In successful", token });
     });
   } catch (err) {
-    console.log("❌ SignIn error:", err);
+    console.log("Error finding user:", err); // Log any errors in sign-in
     res.send({ status: false, message: "Something went wrong" });
   }
 };
 
-// Get User Dashboard (Protected Route)
+// Function to get user dashboard information (requires authentication)
 const getDashboard = (req, res) => {
+  // Get token from the request headers
   const token = req.headers.authorization?.split(" ")[1];
 
+  // If no token is provided, return an error
   if (!token) {
     return res.send({ status: false, message: "No token provided" });
   }
 
+  // Verify the token
   jwt.verify(token, "secret", (err, result) => {
     if (err) {
       console.log("Token error:", err);
@@ -83,13 +87,15 @@ const getDashboard = (req, res) => {
       });
     }
 
-    const email = result.email;
+    const email = result.email; // Get the email from the token
+    // Find the user in the database by email
     UserModel.findOne({ email: email })
       .then((user) => {
         if (!user) {
           return res.send({ status: false, message: "User not found" });
         }
 
+        // Respond with the user data if found
         res.send({ status: true, message: "Successful", user });
       })
       .catch((err) => {
@@ -99,4 +105,5 @@ const getDashboard = (req, res) => {
   });
 };
 
+// Export the controller functions
 module.exports = { registerUser, signInUser, getDashboard };

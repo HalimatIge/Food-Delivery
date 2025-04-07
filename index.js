@@ -11,6 +11,7 @@ app.use(express.urlencoded({ extended: true }));
 app.get("/", (req, res) => res.send("API Running fhh"));
 
 app.use("/api/auth", require("./routes/authRoutes"));
+app.use("/api/foodItems", require("./routes/foodItemRoutes"));
 
 const PORT = process.env.PORT || 5005;
 mongoose
