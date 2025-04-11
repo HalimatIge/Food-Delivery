@@ -1,18 +1,58 @@
+// const express = require("express");
+// const cors = require("cors");
+// const mongoose = require("mongoose");
+// require("dotenv").config();
+// const app = express();
+
+// app.use(cors());
+// app.use(express.json());
+// app.use(express.urlencoded({ extended: true }));
+
+// app.get("/", (req, res) => res.send("API Running fhh"));
+
+// app.use("/api/auth", require("./routes/authRoutes"));
+// app.use("/api/foodItems", require("./routes/foodItemRoutes"));
+
+// const PORT = process.env.PORT || 5005;
+// mongoose
+//   .connect(process.env.MONGO_URI)
+//   .then(() => {
+//     console.log("✅ MongoDB connected successfully");
+//     app.listen(PORT, () =>
+//       console.log(`🚀 Server running on http://localhost:${PORT}`)
+//     );
+//   })
+//   .catch((err) => {
+//     console.error("❌ MongoDB connection error:");
+//     console.error(err.message);
+//     process.exit(1); // Optional: stop the app if DB doesn't connect
+//   });
+
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
 require("dotenv").config();
+
 const app = express();
 
-app.use(cors());
+// ✅ CORS setup to allow cookies from frontend
+app.use(
+  cors({
+    origin: "http://localhost:5173", // your frontend
+    credentials: true, // allow sending cookies
+  })
+);
+
+// Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Routes
 app.get("/", (req, res) => res.send("API Running fhh"));
-
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/foodItems", require("./routes/foodItemRoutes"));
 
+// MongoDB and server start
 const PORT = process.env.PORT || 5005;
 mongoose
   .connect(process.env.MONGO_URI)
@@ -25,5 +65,5 @@ mongoose
   .catch((err) => {
     console.error("❌ MongoDB connection error:");
     console.error(err.message);
-    process.exit(1); // Optional: stop the app if DB doesn't connect
+    process.exit(1);
   });

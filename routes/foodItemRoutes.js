@@ -8,10 +8,10 @@ const {
 } = require("../controllers/foodItemcontroller");
 
 const foodItemRouter = express.Router();
-foodItemRouter.post("/", createFoodItem);
+foodItemRouter.post("/add", createFoodItem);
 foodItemRouter.get("/", getAllFoodItems);
-foodItemRouter.get("/:id", getFoodItemById);
-foodItemRouter.put("/:id", updateFoodItem);
-foodItemRouter.delete("/:id", deleteFoodItem);
+foodItemRouter.get("/get/:id", getFoodItemById);
+foodItemRouter.put("/update/:id", updateFoodItem);
+foodItemRouter.delete("/delete/:id", deleteFoodItem);
 
 module.exports = foodItemRouter;
