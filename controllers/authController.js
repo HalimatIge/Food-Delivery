@@ -24,50 +24,6 @@ const registerUser = async (req, res) => {
   }
 };
 
-// Function for user sign-in
-// const signInUser = async (req, res) => {
-//   console.log("Sign-in request:", req.body); // Log the sign-in request
-
-//   try {
-//     // Find user by email
-//     const user = await UserModel.findOne({ email: req.body.email });
-
-//     // If user not found, return error
-//     if (!user) {
-//       console.log("User not found in database.");
-//       return res.send({ status: false, message: "Wrong Email or Password" });
-//     }
-
-//     // Validate entered password against the hashed password in the DB
-//     user.validatePassword(req.body.password, (err, same) => {
-//       if (err) {
-//         console.log("Password comparison error:", err);
-//         return res.send({ status: false, message: "Something went wrong" });
-//       }
-
-//       if (!same) {
-//         console.log("Wrong email or password");
-//         return res.send({ status: false, message: "Wrong Email or Password" });
-//       }
-
-//       console.log("User successfully authenticated:", user.email);
-
-//       // Create JWT token with the user's email and role
-//       let token = jwt.sign(
-//         { email: req.body.email, role: user.role },
-//         "secret",
-//         {
-//           expiresIn: "1h", // Token will expire in 1 hour
-//         }
-//       );
-//       res.send({ status: true, message: "Sign In successful", token });
-//     });
-//   } catch (err) {
-//     console.log("Error finding user:", err); // Log any errors in sign-in
-//     res.send({ status: false, message: "Something went wrong" });
-//   }
-// };
-
 const signInUser = async (req, res) => {
   console.log("Sign-in request:", req.body);
 
@@ -93,17 +49,22 @@ const signInUser = async (req, res) => {
       console.log("User successfully authenticated:", user.email);
 
       // ✅ Create JWT token
-      const token = jwt.sign({ email: user.email, role: user.role }, "secret", {
-        expiresIn: "1h",
-      });
+      const token = jwt.sign(
+        { email: user.email, role: user.role },
+        process.env.JWT_SECRET,
+        {
+          expiresIn: "4h",
+        }
+      );
 
       // ✅ Set token as an HTTP-only cookie
       res.cookie("token", token, {
         httpOnly: true,
         secure: false,
+        path: "/",
         // secure: process.env.NODE_ENV === "production", // set true in production
         sameSite: "Lax", // or "None" if frontend & backend are on different domains AND using HTTPS
-        maxAge: 24 * 60 * 60 * 1000, // 1 day
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
 
       // ✅ Return success
@@ -116,44 +77,6 @@ const signInUser = async (req, res) => {
   }
 };
 
-// Function to get user dashboard information (requires authentication)
-// const getDashboard = (req, res) => {
-//   // Get token from the request headers
-//   const token = req.headers.authorization?.split(" ")[1];
-
-//   // If no token is provided, return an error
-//   if (!token) {
-//     return res.send({ status: false, message: "No token provided" });
-//   }
-
-//   // Verify the token
-//   jwt.verify(token, "secret", (err, result) => {
-//     if (err) {
-//       console.log("Token error:", err);
-//       return res.send({
-//         status: false,
-//         message: "Session expired, kindly sign in",
-//       });
-//     }
-
-//     const email = result.email; // Get the email from the token
-//     // Find the user in the database by email
-//     UserModel.findOne({ email: email })
-//       .then((user) => {
-//         if (!user) {
-//           return res.send({ status: false, message: "User not found" });
-//         }
-
-//         // Respond with the user data if found
-//         res.send({ status: true, message: "Successful", user });
-//       })
-//       .catch((err) => {
-//         console.log("DB Error:", err);
-//         res.send({ status: false, message: "Database error" });
-//       });
-//   });
-// };
-
 const getDashboard = (req, res) => {
   const token = req.cookies.token;
 
@@ -163,7 +86,7 @@ const getDashboard = (req, res) => {
       .send({ status: false, message: "No token provided" });
   }
 
-  jwt.verify(token, "secret", (err, result) => {
+  jwt.verify(token, process.env.JWT_SECRET, (err, result) => {
     if (err) {
       console.log("Token error:", err);
       return res.status(401).send({
@@ -190,6 +113,30 @@ const getDashboard = (req, res) => {
       });
   });
 };
+const logOutUser = (req, res) => {
+  res.clearCookie(process.env.JWT_SECRET, {
+    httpOnly: true,
+    sameSite: "strict",
+    secure: process.env.NODE_ENV === "production",
+  });
+  res.json({ message: "Logged out" });
+};
+
+const verifyUseronRefresh = (req, res) => {
+  const token = req.cookies.token;
+  if (!token) return res.json({ status: false });
+
+  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    if (err) return res.json({ status: false });
+    return res.json({ status: true, user: decoded });
+  });
+};
 
 // Export the controller functions
-module.exports = { registerUser, signInUser, getDashboard };
+module.exports = {
+  registerUser,
+  signInUser,
+  getDashboard,
+  logOutUser,
+  verifyUseronRefresh,
+};

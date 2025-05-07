@@ -25,7 +25,7 @@ app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/foodItems", require("./routes/foodItemRoutes"));
 
 // MongoDB and server start
-const PORT = process.env.PORT || 5002;
+const PORT = process.env.PORT || 5005;
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {
