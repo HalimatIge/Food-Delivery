@@ -8,7 +8,7 @@ const UserSchema = new mongoose.Schema({
   email: {
     type: String,
     required: [true, "Email field is required"], // Email is mandatory
-    unique: [true, "Email already exist"], // Ensure email is unique
+    unique: [true, "Email already exists."], // Ensure email is unique
   },
   password: { type: String, required: [true, "Password field is required"] }, // User's password
   role: {
@@ -17,6 +17,7 @@ const UserSchema = new mongoose.Schema({
     default: "customer", // Default role is 'customer'
   },
   date: { type: Date, default: Date.now }, // Date of account creation
+
   // });
 });
 

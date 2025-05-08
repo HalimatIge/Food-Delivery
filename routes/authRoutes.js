@@ -2,14 +2,21 @@ const express = require("express");
 const {
   registerUser,
   signInUser,
+  refreshAccessToken,
   getDashboard,
-  logOutUser,verifyUseronRefresh
+  logOutUser,
+  verifyUserOnRefresh,
 } = require("../controllers/authController");
-const userRouter = express.Router();
 
-userRouter.post("/register", registerUser);
-userRouter.post("/signin", signInUser);
-userRouter.get("/dashboard", getDashboard);
-userRouter.post("/logout", logOutUser);
-userRouter.get("/me", verifyUseronRefresh);
-module.exports = userRouter;
+const { protect } = require("../middlewares/authMiddleware");
+
+const router = express.Router();
+
+router.post("/register", registerUser);
+router.post("/signin", signInUser);
+router.get("/refresh", refreshAccessToken);
+router.get("/dashboard", protect, getDashboard);
+router.post("/logout", logOutUser);
+router.get("/me", verifyUserOnRefresh); // Optional auto-login
+
+module.exports = router;

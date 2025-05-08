@@ -1,128 +1,118 @@
-const UserModel = require("../models/user.model"); // Import User model
-const jwt = require("jsonwebtoken"); // Import JWT for token generation
-require("dotenv").config();
+const UserModel = require("../models/user.model");
+const jwt = require("jsonwebtoken");
 
-// Function to register a new user
+// Generate tokens
+const generateAccessToken = (user) =>
+  jwt.sign(user, process.env.JWT_SECRET, { expiresIn: "15m" });
+
+const generateRefreshToken = (user) =>
+  jwt.sign(user, process.env.JWT_REFRESH_SECRET, { expiresIn: "7d" });
+
+// Register
 const registerUser = async (req, res) => {
-  console.log("Received request body:", req.body); // Log incoming request
-
   try {
-    const form = new UserModel(req.body); // Create a new user using the request body
-    await form.save(); // Save user to the database
-
-    console.log("Data saved successfully:", form); // Log success
-    res.send({ status: true, message: "User registered successfully!" }); // Send success response
+    const newUser = new UserModel(req.body);
+    await newUser.save();
+    res
+      .status(201)
+      .json({ status: true, message: "User registered successfully!" });
   } catch (err) {
-    console.log("Error saving user:", err); // Log any errors
-
-    // Handle duplicate email error
     if (err.code === 11000) {
-      res.send({ status: false, message: "Email already in use" });
+      res.status(409).json({ status: false, message: "Email already in use" });
     } else {
-      res.send({ status: false, message: "Something went wrong" });
+      res.status(500).json({ status: false, message: "Registration failed" });
     }
   }
 };
 
+// Sign in
 const signInUser = async (req, res) => {
-  console.log("Sign-in request:", req.body);
-
   try {
     const user = await UserModel.findOne({ email: req.body.email });
-
-    if (!user) {
-      console.log("User not found in database.");
-      return res.send({ status: false, message: "Wrong Email or Password" });
-    }
+    if (!user)
+      return res
+        .status(401)
+        .json({ status: false, message: "Wrong email or password" });
 
     user.validatePassword(req.body.password, (err, same) => {
-      if (err) {
-        console.log("Password comparison error:", err);
-        return res.send({ status: false, message: "Something went wrong" });
-      }
+      if (err || !same)
+        return res
+          .status(401)
+          .json({ status: false, message: "Wrong email or password" });
 
-      if (!same) {
-        console.log("Wrong email or password");
-        return res.send({ status: false, message: "Wrong Email or Password" });
-      }
+      const payload = { id: user._id, email: user.email, role: user.role };
 
-      console.log("User successfully authenticated:", user.email);
+      const accessToken = generateAccessToken(payload);
+      const refreshToken = generateRefreshToken(payload);
 
-      // ✅ Create JWT token
-      const token = jwt.sign(
-        { email: user.email, role: user.role },
-        process.env.JWT_SECRET,
-        {
-          expiresIn: "4h",
-        }
-      );
-
-      // ✅ Set token as an HTTP-only cookie
-      res.cookie("token", token, {
+      res.cookie("token", accessToken, {
         httpOnly: true,
         secure: false,
-        path: "/",
-        // secure: process.env.NODE_ENV === "production", // set true in production
-        sameSite: "Lax", // or "None" if frontend & backend are on different domains AND using HTTPS
+        sameSite: "Lax",
+        maxAge: 1000 * 60 * 15, // 15 min
+      });
+
+      res.cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: false,
+        sameSite: "Lax",
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
 
-      // ✅ Return success
-      // res.send({ status: true, message: "Sign In successful" });
       res.status(200).json({ status: true, message: "Login successful", user });
     });
   } catch (err) {
-    console.log("Error finding user:", err);
-    res.send({ status: false, message: "Something went wrong" });
+    res.status(500).json({ status: false, message: "Server error" });
   }
 };
 
-const getDashboard = (req, res) => {
-  const token = req.cookies.token;
+// Refresh token
+const refreshAccessToken = (req, res) => {
+  const refreshToken = req.cookies.refreshToken;
+  if (!refreshToken)
+    return res.status(401).json({ message: "No refresh token" });
 
-  if (!token) {
-    return res
-      .status(401)
-      .send({ status: false, message: "No token provided" });
-  }
+  jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET, (err, user) => {
+    if (err) return res.status(403).json({ message: "Invalid refresh token" });
 
-  jwt.verify(token, process.env.JWT_SECRET, (err, result) => {
-    if (err) {
-      console.log("Token error:", err);
-      return res.status(401).send({
-        status: false,
-        message: "Session expired, kindly sign in",
-      });
-    }
+    const newAccessToken = generateAccessToken({
+      id: user.id,
+      email: user.email,
+      role: user.role,
+    });
 
-    const email = result.email;
+    res.cookie("token", newAccessToken, {
+      httpOnly: true,
+      secure: false,
+      sameSite: "Lax",
+      maxAge: 1000 * 60 * 15,
+    });
 
-    UserModel.findOne({ email })
-      .then((user) => {
-        if (!user) {
-          return res
-            .status(404)
-            .send({ status: false, message: "User not found" });
-        }
-
-        res.send({ status: true, message: "Successful", user });
-      })
-      .catch((err) => {
-        console.log("DB Error:", err);
-        res.status(500).send({ status: false, message: "Database error" });
-      });
+    res.json({ message: "Access token refreshed" });
   });
 };
+
+// Dashboard (protected)
+const getDashboard = async (req, res) => {
+  try {
+    const user = await UserModel.findById(req.user.id).select("-password");
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.status(200).json({ message: "Dashboard loaded", user });
+  } catch (err) {
+    res.status(500).json({ message: "Error loading dashboard" });
+  }
+};
+
+// Logout
 const logOutUser = (req, res) => {
-  res.clearCookie(process.env.JWT_SECRET, {
-    httpOnly: true,
-    sameSite: "strict",
-    secure: process.env.NODE_ENV === "production",
-  });
-  res.json({ message: "Logged out" });
+  res.clearCookie("token");
+  res.clearCookie("refreshToken");
+  res.json({ message: "Logged out successfully" });
 };
 
-const verifyUseronRefresh = (req, res) => {
+// Auto login on refresh
+const verifyUserOnRefresh = (req, res) => {
   const token = req.cookies.token;
   if (!token) return res.json({ status: false });
 
@@ -132,11 +122,11 @@ const verifyUseronRefresh = (req, res) => {
   });
 };
 
-// Export the controller functions
 module.exports = {
   registerUser,
   signInUser,
+  refreshAccessToken,
   getDashboard,
   logOutUser,
-  verifyUseronRefresh,
+  verifyUserOnRefresh,
 };

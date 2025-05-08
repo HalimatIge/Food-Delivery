@@ -4,7 +4,6 @@ const mongoose = require("mongoose");
 require("dotenv").config();
 const cookieParser = require("cookie-parser");
 const app = express();
-
 app.use(cookieParser());
 
 // ✅ CORS setup to allow cookies from frontend

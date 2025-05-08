@@ -1,16 +1,18 @@
-// middleware/authMiddleware.js
-import jwt from "jsonwebtoken";
+const jwt = require("jsonwebtoken");
 
-export const protect = (req, res, next) => {
-  const token = req.headers.authorization?.split(" ")[1];
+const protect = (req, res, next) => {
+  const token = req.cookies.token;
+
   if (!token)
-    return res.status(401).json({ msg: "No token, authorization denied" });
+    return res.status(401).json({ message: "No token, access denied" });
 
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    if (err)
+      return res.status(403).json({ message: "Invalid or expired token" });
+
     req.user = decoded;
     next();
-  } catch (err) {
-    res.status(401).json({ msg: "Token is not valid" });
-  }
+  });
 };
+
+module.exports = { protect };
