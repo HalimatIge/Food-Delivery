@@ -6,7 +6,8 @@ const {
   updateFoodItem,
   deleteFoodItem,
 } = require("../controllers/foodItemcontroller");
-const adminAuthorization = require("../middlewares/AdminAuthorization"); // Import the middleware
+const { adminAuthorization } = require("../middlewares/adminAuthorization");
+// const {adminAuthorization} = require("../middlewares/adminAuthorization"); // Import the middleware
 
 const foodItemRouter = express.Router();
 
