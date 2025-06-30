@@ -6,13 +6,29 @@ const FoodItemSchema = new mongoose.Schema({
   price: { type: Number, required: [true, "Price is required"] }, // Price of the food item
   category: {
     type: String,
-    enum: ["starter", "main", "dessert", "beverage"], // Categories of food
+    enum: ["starter", "main", "dessert", "beverage", "appetizer", "special"], // Categories of food
     required: true,
   },
-  image: { type: String, required: [true, "Image URL is required"] }, // Image URL of the food item
+  images: [
+    {
+      public_id: {
+        type: String,
+        // required: true,
+      },
+      name: {
+        type: String,
+        // required: true,
+      },
+      url: {
+        type: String,
+        // required: [true, 'file url (file_upload.url)'],
+      },
+    },
+  ],
+  // image: { type: String, required: [true, "Image URL is required"] }, // Image URL of the food item
   available: { type: Boolean, default: true }, // Availability status of the food item
   dateAdded: { type: Date, default: Date.now }, // Date when the food item was added to the menu
 });
 
-let FoodItemModel = mongoose.model("FoodItem", FoodItemSchema);
+const FoodItemModel = mongoose.model("FoodItem", FoodItemSchema);
 module.exports = FoodItemModel;
