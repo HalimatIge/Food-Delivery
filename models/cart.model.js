@@ -1,18 +1,22 @@
+// models/Cart.js
 const mongoose = require("mongoose");
 
-const CartSchema = new mongoose.Schema({
-  name: { type: String, required: [true, "Food name is required"] }, // Name of the food item
-  description: { type: String, required: [true, "Description is required"] }, // Description of the food item
-  price: { type: Number, required: [true, "Price is required"] }, // Price of the food item
-  category: {
-    type: String,
-    enum: ["starter", "main", "dessert", "beverage"], // Categories of food
+const cartSchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
     required: true,
+    unique: true,
   },
-  image: { type: String, required: [true, "Image URL is required"] }, // Image URL of the food item
-  available: { type: Boolean, default: true }, // Availability status of the food item
-  dateAdded: { type: Date, default: Date.now }, // Date when the food item was added to the menu
+  cart: [
+    {
+      _id: { type: mongoose.Schema.Types.ObjectId, ref: "FoodItem" },
+      name: String,
+      price: Number,
+      quantity: Number,
+      images: Array,
+    },
+  ],
 });
 
-let CartModel = mongoose.model("Cart", CartSchema);
-module.exports = CartModel;
+module.exports = mongoose.model("Cart", cartSchema);

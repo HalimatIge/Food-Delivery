@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
+const cartRoutes = require("./routes/cartRoutes");
 require("dotenv").config();
 const cookieParser = require("cookie-parser");
 const app = express();
@@ -19,9 +20,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Routes
-app.get("/", (req, res) => res.send("API Running fhh"));
+app.get("/", (req, res) => res.send("API Running "));
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/foodItems", require("./routes/foodItemRoutes"));
+app.use("/api/cart", cartRoutes);
+app.use("/api/orders", require("./routes/orderRoutes"));
 
 // MongoDB and server start
 const PORT = process.env.PORT || 5005;

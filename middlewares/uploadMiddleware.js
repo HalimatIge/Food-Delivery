@@ -6,10 +6,6 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
 });
 
-// Verify the instance is created properly
-console.log("Multer instance created successfully:", !!upload);
-console.log("Array method exists:", typeof upload.array === "function");
-
 module.exports = upload;
 
 // const multer = require("multer");
