@@ -22,4 +22,6 @@ orderRouter.patch("/:orderId/status", updateOrderStatus); // Admin - Update orde
 
 orderRouter.put("/:id/cancel", cancelOrder); // New cancel route
 
+orderRouter.put("/:orderId/status", updateOrderStatus);
+
 module.exports = orderRouter;

@@ -27,6 +27,9 @@ const FoodItemSchema = new mongoose.Schema({
   ],
   // image: { type: String, required: [true, "Image URL is required"] }, // Image URL of the food item
   available: { type: Boolean, default: true }, // Availability status of the food item
+  isPopular: { type: Boolean, default: false },
+  isSpecial: { type: Boolean, default: false },
+
   dateAdded: { type: Date, default: Date.now }, // Date when the food item was added to the menu
 });
 

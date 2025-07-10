@@ -64,28 +64,86 @@ const createFoodItem = async (req, res) => {
 };
 const getAllFoodItems = async (req, res) => {
   try {
-    const foodItems = await FoodItemModel.find().lean();
-    if (!foodItems || foodItems.length === 0) {
-      return res.status(404).send({
-        status: false,
-        message: "No food items found",
-      });
+    const {
+      category,
+      search,
+      popular,
+      page = 1,
+      limit = 8,
+      sort = "dateAdded",
+      order = "desc",
+    } = req.query;
+
+    const filter = { available: true };
+
+    if (category && category !== "all") {
+      filter.category = category;
     }
-    res.status(200).send({
+
+    if (search) {
+      filter.name = { $regex: search, $options: "i" };
+    }
+
+    if (popular === "true") {
+      filter.isPopular = true;
+    }
+
+    const skip = (page - 1) * limit;
+    const sortOrder = order === "asc" ? 1 : -1;
+
+    const [foodItems, total] = await Promise.all([
+      FoodItemModel.find(filter)
+        .sort({ [sort]: sortOrder })
+        .skip(Number(skip))
+        .limit(Number(limit))
+        .lean(),
+      FoodItemModel.countDocuments(filter),
+    ]);
+
+    res.status(200).json({
       status: true,
       message: "Food items retrieved successfully",
-      count: foodItems.length, // Helpful metadata
+      count: foodItems.length,
+      totalPages: Math.ceil(total / limit),
+      currentPage: Number(page),
       foodItems,
     });
   } catch (err) {
-    res.status(500).send({
+    res.status(500).json({
       status: false,
       message: err.message || "Database operation failed",
     });
   }
 };
 
-// Get a single food item by its ID
+// const getAllFoodItems = async (req, res) => {
+//   try {
+//     const { category } = req.query;
+//     const filter = category && category !== "all" ? { category } : {};
+
+//     const foodItems = await FoodItemModel.find(filter).lean();
+
+//     if (!foodItems || foodItems.length === 0) {
+//       return res.status(404).json({
+//         status: false,
+//         message: "No food items found for this category",
+//       });
+//     }
+
+//     res.status(200).json({
+//       status: true,
+//       message: "Food items retrieved successfully",
+//       count: foodItems.length,
+//       foodItems,
+//     });
+//   } catch (err) {
+//     res.status(500).json({
+//       status: false,
+//       message: err.message || "Database operation failed",
+//     });
+//   }
+// };
+
 const getFoodItemById = async (req, res) => {
   try {
     const foodItem = await FoodItemModel.findById(req.params.id); // Find food item by ID
@@ -112,119 +170,6 @@ const getFoodItemById = async (req, res) => {
 };
 
 // Update a food item by its ID
-
-// const updateFoodItem = async (req, res) => {
-//   try {
-//     const foodItem = await FoodItemModel.findById(req.params.id);
-//     if (!foodItem)
-//       return res.status(404).json({ message: "Food item not found" });
-
-//     // Parse the text fields
-//     const { name, price, category, description } = req.body;
-//     foodItem.name = name;
-//     foodItem.price = price;
-//     foodItem.category = category;
-//     foodItem.description = description;
-
-//     // Handle images:
-//     let finalImages = [];
-
-//     // Parse and retain existing images (from frontend)
-//     if (req.body.existingImages) {
-//       const existingImages = JSON.parse(req.body.existingImages);
-//       finalImages = [...existingImages];
-//     }
-
-//     // Add new uploaded images (if any)
-//     if (req.files?.length > 0) {
-//       const newImages = req.files.map((file) => ({
-//         url: `/uploads/${file.filename}`, // or Cloudinary URL
-//         name: file.originalname,
-//         public_id: file.filename, // or Cloudinary public_id
-//       }));
-//       finalImages = [...finalImages, ...newImages];
-//     }
-
-//     foodItem.images = finalImages;
-
-//     await foodItem.save();
-
-//     res
-//       .status(200)
-//       .json({ message: "Food item updated successfully", foodItem });
-//   } catch (err) {
-//     console.error("Update error:", err);
-//     res.status(500).json({ message: "Failed to update food item" });
-//   }
-// };
-
-// const updateFoodItem = async (req, res) => {
-//   try {
-//     const { id } = req.params;
-
-//     let foodItem = await FoodItemModel.findById(id);
-//     if (!foodItem) {
-//       return res.status(404).json({
-//         success: false,
-//         message: `Food item with ID ${id} not found`,
-//       });
-//     }
-
-//     let uploadedImages = [];
-
-//     // If new images are uploaded
-//     if (req.files && req.files.images) {
-//       const files = Array.isArray(req.files.images)
-//         ? req.files.images
-//         : [req.files.images];
-
-//       for (const file of files) {
-//         const result = await cloudinary.uploader.upload(file.path, {
-//           folder: "food_items",
-//         });
-
-//         uploadedImages.push({
-//           public_id: result.public_id,
-//           url: result.secure_url,
-//         });
-//       }
-//     }
-
-//     // Use existing images if no new images uploaded
-//     if (uploadedImages.length === 0 && req.body.existingImages) {
-//       uploadedImages = JSON.parse(req.body.existingImages);
-//     }
-
-//     const updateData = {
-//       name: req.body.name || foodItem.name,
-//       price: req.body.price || foodItem.price,
-//       category: req.body.category || foodItem.category,
-//       description: req.body.description || foodItem.description,
-//       available:
-//         req.body.available !== undefined
-//           ? req.body.available
-//           : foodItem.available,
-//       images: uploadedImages,
-//     };
-
-//     const updatedFood = await FoodItemModel.findByIdAndUpdate(id, updateData, {
-//       new: true,
-//     });
-
-//     res.status(200).json({
-//       success: true,
-//       message: "Food item updated successfully",
-//       data: updatedFood,
-//     });
-//   } catch (error) {
-//     console.error("Update error:", error);
-//     res.status(500).json({
-//       success: false,
-//       message: "An error occurred while updating the food item",
-//     });
-//   }
-// };
-
 const updateFoodItem = async (req, res) => {
   try {
     let updatedImages = [];

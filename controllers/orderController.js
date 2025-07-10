@@ -85,6 +85,21 @@ const updateOrderStatus = async (req, res, next) => {
     const { orderId } = req.params;
     const { status } = req.body;
 
+    const validStatuses = [
+      "Pending",
+      "Processing",
+      "Confirmed",
+      "On the way",
+      "Delivered",
+      "Cancelled",
+    ];
+
+    if (!validStatuses.includes(status)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid status" });
+    }
+
     const updated = await Order.findByIdAndUpdate(
       orderId,
       { status },
@@ -107,37 +122,6 @@ const updateOrderStatus = async (req, res, next) => {
     next(err);
   }
 };
-
-// const cancelOrder = async (req, res, next) => {
-//   try {
-//     const order = await Order.findById(req.params.id);
-
-//     if (!order) {
-//       return res.status(404).json({
-//         success: false,
-//         message: "Order not found",
-//       });
-//     }
-
-//     if (order.status !== "Pending") {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Only pending orders can be cancelled",
-//       });
-//     }
-
-//     order.status = "Cancelled";
-//     await order.save();
-
-//     res.status(200).json({
-//       success: true,
-//       message: "Order cancelled successfully",
-//       data: order,
-//     });
-//   } catch (err) {
-//     next(err);
-//   }
-// };
 
 const cancelOrder = async (req, res, next) => {
   try {
